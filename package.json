@@ -6,16 +6,16 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "generate-vapid-key": "node scripts/generate-vapid-key.js"
   },
   "dependencies": {
-    "hono": "^4.0.0",
-    "web-push": "^3.6.7"
+    "cf-webpush": "^1.1.4",
+    "hono": "^4.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240208.0",
     "@types/node": "^20.0.0",
-    "@types/web-push": "^3.6.4",
     "typescript": "^5.0.0",
     "wrangler": "^3.0.0"
   }

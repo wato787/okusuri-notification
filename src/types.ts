@@ -22,8 +22,7 @@ export interface NotificationData {
 
 // 環境変数
 export interface Env {
-  // VAPID鍵
-  VAPID_PUBLIC_KEY?: string
+  // VAPID秘密鍵（JWK形式のJSON文字列）
   VAPID_PRIVATE_KEY?: string
   // Web Pushサブスクリプション（必須）
   PUSH_SUBSCRIPTION?: string // JSON文字列

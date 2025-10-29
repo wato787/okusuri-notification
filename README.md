@@ -98,16 +98,14 @@ okusuri-notification/
 ### 実装済み機能
 
 - ✅ POST `/api/notification` エンドポイント
-- ✅ Web Push通知送信機能
-- ✅ 重複送信防止（KVストア使用）
+- ✅ Web Push通知送信機能（Cloudflare Workers対応）
 - ✅ 1ユーザー固定の簡略化実装
 - ✅ 固定メッセージによる通知送信
 
-### 動作確認が必要
+### 実装完了
 
-- ⚠️ Web Pushライブラリの動作確認
-  - `web-push`ライブラリがCloudflare Workersで動作するか要確認
-  - 動作しない場合は、Web Pushプロトコルのネイティブ実装が必要
+- ✅ Web PushプロトコルのCloudflare Workers対応実装
+  - Web Crypto APIを使用したネイティブ実装
 
 ### 注意事項
 
@@ -121,14 +119,36 @@ okusuri-notification/
 
 ### 必須
 
-- `VAPID_PUBLIC_KEY`: Web Push用の公開鍵
-- `VAPID_PRIVATE_KEY`: Web Push用の秘密鍵
+- `VAPID_PRIVATE_KEY`: Web Push用の秘密鍵（**JWK形式のJSON文字列**）
+
+**重要**: `VAPID_PRIVATE_KEY`はJWK形式（JSON文字列）である必要があります。
 
 VAPID鍵の生成方法：
+
+**方法1: 付属のスクリプトを使用（推奨）**
+
 ```bash
-npm install -g web-push
-web-push generate-vapid-keys
+bun run generate-vapid-key
+# または
+node scripts/generate-vapid-key.js
 ```
+
+出力された`VAPID_PRIVATE_KEY`を`.dev.vars`ファイルに設定してください。
+
+**方法2: ブラウザのコンソールで生成**
+
+```javascript
+// ブラウザのコンソールで実行
+const keyPair = await crypto.subtle.generateKey(
+  { name: 'ECDSA', namedCurve: 'P-256' },
+  true,
+  ['sign']
+)
+const jwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey)
+console.log('VAPID_PRIVATE_KEY=' + JSON.stringify(jwk))
+```
+
+出力された内容を`.dev.vars`ファイルにコピーしてください。
 
 ### 必須
 

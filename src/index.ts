@@ -1,9 +1,6 @@
 import { Hono } from 'hono'
-import type { Env } from './types'
-import {
-  sendWebPushNotification,
-} from './utils/webpush'
-import type { PushSubscription } from './types'
+import type { Env, PushSubscription } from './types'
+import { sendWebPushNotification } from './utils/webpush'
 
 // 固定通知メッセージ
 const DEFAULT_NOTIFICATION_MESSAGE = 'お薬の時間です'
@@ -67,8 +64,8 @@ async function sendNotification(env: Env): Promise<boolean> {
   }
 
   // VAPID鍵の確認
-  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
-    console.error('VAPID鍵が設定されていません')
+  if (!env.VAPID_PRIVATE_KEY) {
+    console.error('VAPID_PRIVATE_KEYが設定されていません')
     return false
   }
 
@@ -89,7 +86,6 @@ async function sendNotification(env: Env): Promise<boolean> {
           userId,
         },
       },
-      env.VAPID_PUBLIC_KEY,
       env.VAPID_PRIVATE_KEY
     )
 

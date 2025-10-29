@@ -2,9 +2,10 @@
 # 実際の値を設定して .dev.vars ファイルとして保存してください
 
 # VAPID鍵（Web Push用）
-# 生成方法: npm install -g web-push && web-push generate-vapid-keys
-VAPID_PUBLIC_KEY=your_vapid_public_key
-VAPID_PRIVATE_KEY=your_vapid_private_key
+# 重要: VAPID_PRIVATE_KEYはJWK形式（JSON文字列）である必要があります
+# JWK形式の例:
+# {"kty":"EC","crv":"P-256","x":"base64url...","y":"base64url...","d":"base64url..."}
+VAPID_PRIVATE_KEY={"kty":"EC","crv":"P-256","x":"...","y":"...","d":"..."}
 
 # Web Pushサブスクリプション（必須）
 # 実際のサブスクリプションJSONを設定してください
