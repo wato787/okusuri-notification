@@ -1,0 +1,10 @@
+# 開発環境用の環境変数テンプレート
+# 実際の値を設定して .dev.vars ファイルとして保存してください
+
+# VAPID鍵（Web Push用）
+# VAPID_PUBLIC_KEY=your_vapid_public_key
+# VAPID_PRIVATE_KEY=your_vapid_private_key
+
+# データベース接続URL（必要に応じて）
+# DATABASE_URL=your_database_url
+

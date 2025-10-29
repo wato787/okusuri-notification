@@ -1,0 +1,13 @@
+name = "okusuri-notification"
+compatibility_date = "2024-12-01"
+main = "src/index.ts"
+compatibility_flags = ["nodejs_compat"]
+
+# 本番環境の設定
+[env.production]
+name = "okusuri-notification"
+
+# 開発環境の設定
+[env.development]
+name = "okusuri-notification-dev"
+
