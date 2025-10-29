@@ -13,6 +13,3 @@ PUSH_SUBSCRIPTION={"endpoint":"https://fcm.googleapis.com/fcm/send/...","keys":{
 # ユーザーID（省略可、デフォルト値: user-1）
 USER_ID=user-1
 
-# 通知メッセージ（省略可、デフォルト値あり）
-NOTIFICATION_MESSAGE=お薬の時間です
-

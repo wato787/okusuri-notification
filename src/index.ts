@@ -72,8 +72,8 @@ async function sendNotification(env: Env): Promise<boolean> {
     return false
   }
 
-  // 固定メッセージを使用（環境変数から設定可能）
-  const message =  DEFAULT_NOTIFICATION_MESSAGE
+  // 固定メッセージを使用
+  const message = DEFAULT_NOTIFICATION_MESSAGE
   const userId = env.USER_ID || 'user-1'
 
   // Web Push通知を送信
