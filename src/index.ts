@@ -1,8 +1,8 @@
 import type { Context } from 'aws-lambda'
 import {
   sendWebPushNotification,
-} from './utils/webpush.js'
-import type { PushSubscription } from './types.js'
+} from './utils/webpush'
+import type { PushSubscription } from './types'
 
 // 固定通知メッセージ
 const DEFAULT_NOTIFICATION_MESSAGE = 'お薬の時間です'

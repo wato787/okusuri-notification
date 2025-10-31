@@ -51,26 +51,12 @@ const dependencies = Object.keys(packageJson.dependencies || {})
 console.log('dist/ ディレクトリをZIPに追加中...')
 archive.directory(distDir, false)
 
-// node_modulesからproduction依存関係を追加
-// 注: ネストされた依存関係は通常トップレベルのnode_modulesにインストールされるため、
-// production依存関係とそのトップレベルの依存関係を含めます
+// node_modules全体を追加（production依存関係とそのすべてのネストされた依存関係を含む）
+// web-pushなどのライブラリは多くの依存関係を持つため、確実に動作するように全体をコピーします
 if (fs.existsSync(nodeModulesDir)) {
-  console.log('node_modules/ から依存関係をZIPに追加中...')
-  
-  // 直接依存関係を追加
-  for (const dep of dependencies) {
-    const depPath = path.join(nodeModulesDir, dep)
-    if (fs.existsSync(depPath)) {
-      archive.directory(depPath, path.join('node_modules', dep))
-      console.log(`  - ${dep} を追加`)
-    }
-  }
-  
-  // web-pushなどの依存関係が必要な場合、node_modules全体をコピーすることも可能ですが、
-  // まずはproduction依存関係のみで試してみます
-  // 問題がある場合は、以下のコメントを外してnode_modules全体をコピーしてください
-  // console.log('node_modules/ 全体をZIPに追加中...')
-  // archive.directory(nodeModulesDir, 'node_modules')
+  console.log('node_modules/ 全体をZIPに追加中...')
+  archive.directory(nodeModulesDir, 'node_modules')
+  console.log('  - node_modules全体を追加しました')
 } else {
   console.warn('警告: node_modulesディレクトリが見つかりません。')
 }
