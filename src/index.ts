@@ -56,9 +56,33 @@ async function sendNotification(): Promise<boolean> {
   // サブスクリプションJSONをパース
   let subscription: PushSubscription
   try {
+    // デバッグ: 受信した文字列の長さと最初/最後の部分をログ出力
+    console.log(`PUSH_SUBSCRIPTION文字列長: ${pushSubscription.length}`)
+    if (pushSubscription.length > 100) {
+      console.log(`PUSH_SUBSCRIPTION先頭100文字: ${pushSubscription.substring(0, 100)}...`)
+      console.log(`PUSH_SUBSCRIPTION末尾50文字: ...${pushSubscription.substring(pushSubscription.length - 50)}`)
+    } else {
+      console.log(`PUSH_SUBSCRIPTION全体: ${pushSubscription}`)
+    }
+
     subscription = JSON.parse(pushSubscription)
+
+    // 必須フィールドの検証
+    if (!subscription.endpoint) {
+      console.error('サブスクリプションにendpointがありません')
+      return false
+    }
+    if (!subscription.keys || !subscription.keys.p256dh) {
+      console.error('サブスクリプションにkeys.p256dhがありません')
+      return false
+    }
   } catch (error) {
-    console.error('サブスクリプションJSONパースエラー:', error)
+    const errorMessage = error instanceof Error ? error.message : 'unknown error'
+    console.error('サブスクリプションJSONパースエラー:', errorMessage)
+    console.error('受信した文字列が不完全な可能性があります。SSM Parameter Storeの値を確認してください。')
+    if (error instanceof SyntaxError) {
+      console.error(`JSON構文エラー位置: ${error.message.includes('position') ? error.message : '不明'}`)
+    }
     return false
   }
 
@@ -91,7 +115,16 @@ async function sendNotification(): Promise<boolean> {
     console.log('通知送信成功')
     return true
   } catch (error) {
-    console.error('通知送信エラー:', error)
+    const errorMessage = error instanceof Error ? error.message : 'unknown error'
+    console.error('通知送信エラー:', errorMessage)
+    
+    // サブスクリプションが無効な場合のログ
+    if (errorMessage.includes('サブスクリプション無効') || errorMessage.includes('410')) {
+      console.error(
+        '⚠️ プッシュサブスクリプションが無効です。新しいサブスクリプションを取得してSSM Parameter Storeを更新してください。'
+      )
+    }
+    
     return false
   }
 }
