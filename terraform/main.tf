@@ -139,7 +139,5 @@ resource "aws_lambda_layer_version" "webpush_dependencies" {
   description         = "web-push依存関係を含むLambda Layer"
 
   source_code_hash = filebase64sha256("${path.module}/../${var.webpush_layer_zip_file}")
-
-  depends_on = [aws_iam_role.lambda_role]
 }
 

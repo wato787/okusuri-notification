@@ -35,8 +35,8 @@ async function main() {
   })
 
   if (!fs.existsSync(nodeModulesDir)) {
-    console.warn('警告: node_modulesディレクトリが見つかりません。レイヤーZIPは作成されません。')
-    return
+    console.error('エラー: node_modulesディレクトリが見つかりません。"bun install" を実行して依存関係をインストールしてください。')
+    process.exit(1)
   }
 
   await createZip(layerZipPath, (archive) => {
