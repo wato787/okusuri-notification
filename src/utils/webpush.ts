@@ -1,5 +1,5 @@
 import type { PushSubscription, NotificationData } from '../types'
-import { buildRequest, type JwtData } from 'cf-webpush'
+import * as webpush from 'web-push'
 
 /**
  * Web Push通知を送信
@@ -7,9 +7,15 @@ import { buildRequest, type JwtData } from 'cf-webpush'
 export async function sendWebPushNotification(
   subscription: PushSubscription,
   notification: NotificationData,
+  vapidPublicKey: string,
   vapidPrivateKey: string
 ): Promise<void> {
-  const subscriber = 'mailto:example@example.com'
+  // VAPID鍵を設定
+  webpush.setVapidDetails(
+    'mailto:example@example.com', // Subscriber (開発者のメールアドレス)
+    vapidPublicKey,
+    vapidPrivateKey
+  )
 
   // 通知データをJSONエンコード
   const payload = JSON.stringify({
@@ -18,43 +24,19 @@ export async function sendWebPushNotification(
     data: notification.data || {},
   })
 
-  // VAPID秘密鍵をJWK形式としてパース
-  let jwk: JsonWebKey
-  try {
-    jwk = JSON.parse(vapidPrivateKey) as JsonWebKey
-  } catch (error) {
-    throw new Error(
-      'VAPID秘密鍵はJWK形式（JSON文字列）である必要があります。' +
-      '例: {"kty":"EC","crv":"P-256","x":"...","y":"...","d":"..."}'
-    )
-  }
-
-  // JWTデータを構築
-  const now = Math.floor(Date.now() / 1000)
-  const jwtData: JwtData = {
-    aud: new URL(subscription.endpoint).origin,
-    exp: now + 12 * 60 * 60, // 12時間
-    sub: subscriber,
-  }
-
-  // Web Pushリクエストを構築
-  const request = await buildRequest(
-    {
-      jwk,
-      jwt: jwtData,
-      payload,
-      ttl: 30,
-    },
-    subscription
-  )
-
   // Web Push通知を送信
-  const response = await fetch(request)
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(
-      `Web Push送信失敗: ${response.status} ${response.statusText} - ${errorText}`
-    )
-  }
+  await webpush.sendNotification(
+    {
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+      },
+    },
+    payload,
+    {
+      TTL: 30, // Time To Live (秒)
+    }
+  )
 }
+
