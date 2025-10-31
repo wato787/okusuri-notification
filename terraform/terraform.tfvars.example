@@ -1,0 +1,15 @@
+# AWS設定
+aws_region = "ap-northeast-1"
+
+# Lambda関数設定
+function_name = "okusuri-notification"
+lambda_zip_file = "lambda.zip"
+
+# SSM Parameter Store設定
+ssm_parameter_prefix = "/okusuri-notification"
+
+# Web Push設定（実際の値に置き換えてください）
+vapid_public_key = "your-vapid-public-key-here"
+vapid_private_key = "your-vapid-private-key-here"
+push_subscription = "{\"endpoint\":\"https://...\",\"keys\":{\"p256dh\":\"...\",\"auth\":\"...\"}}"
+

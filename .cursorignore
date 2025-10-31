@@ -1,1 +1,3 @@
 .dev.vars
+.env
+terraform/terraform.tfvars
