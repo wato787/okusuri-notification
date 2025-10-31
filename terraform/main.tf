@@ -10,6 +10,13 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+
+  default_tags {
+    tags = {
+      okusuri_notification = "true"
+      Project             = "okusuri_notification"
+    }
+  }
 }
 
 # IAMロール: Lambda実行用
