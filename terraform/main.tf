@@ -131,6 +131,29 @@ resource "aws_lambda_function" "notification_function" {
   }
 }
 
+# EventBridge（CloudWatch Events）ルール: 毎日22:00 JSTにLambdaを実行
+resource "aws_cloudwatch_event_rule" "daily_notification_schedule" {
+  name                = "${var.function_name}-daily-schedule"
+  description         = "Daily trigger at 22:00 JST for ${var.function_name}"
+  schedule_expression = "cron(0 13 * * ? *)" # 13:00 UTC = 22:00 JST
+}
+
+# EventBridgeターゲット: スケジュールルールからLambdaを実行
+resource "aws_cloudwatch_event_target" "daily_notification_target" {
+  rule      = aws_cloudwatch_event_rule.daily_notification_schedule.name
+  target_id = "${var.function_name}-daily-target"
+  arn       = aws_lambda_function.notification_function.arn
+}
+
+# Lambdaパーミッション: EventBridgeからのInvokeを許可
+resource "aws_lambda_permission" "allow_cloudwatch_to_invoke" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.notification_function.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_notification_schedule.arn
+}
+
 resource "aws_lambda_layer_version" "webpush_dependencies" {
   filename   = "${path.module}/../${var.webpush_layer_zip_file}"
   layer_name = "${var.function_name}-webpush"
