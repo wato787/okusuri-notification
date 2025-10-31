@@ -1,6 +1,6 @@
 # okusuri-notification
 
-通知を送信するためのサービス。AWS Lambda + Terraformでデプロイできます。
+通知を送信するためのサービス。AWS Lambda + Terraformでデプロイできます。`web-push`依存関係はLambda Layerとしてデプロイされ、関数コードと切り離されています。
 
 ## 技術スタック
 
@@ -65,7 +65,7 @@ mise run deploy
 または、個別に実行する場合：
 
 ```bash
-# TypeScriptをコンパイルしてLambda用ZIPファイルを作成
+# TypeScriptをコンパイルしてLambda用ZIPファイルを作成（lambda.zip と webpush-layer.zip を生成）
 bun run build:lambda
 
 # Terraformで変更内容を確認
@@ -74,6 +74,12 @@ bun run terraform:plan
 # Terraformでデプロイ
 bun run terraform:apply
 ```
+
+### Lambda Layerについて
+
+- `bun run build:lambda` 実行時に `lambda.zip`（アプリケーションコード）と `webpush-layer.zip`（`web-push`依存関係）が生成されます。
+- `terraform apply` では両方のZIPファイルを参照し、`web-push`はLambda Layerとしてデプロイされます。
+- Layerの更新内容のみを反映したい場合も、`bun run build:lambda` を再実行して `webpush-layer.zip` を更新してください。
 
 **環境変数のみ変更する場合**（`terraform.tfvars`の値を変更した場合）：
 ```bash
@@ -124,7 +130,7 @@ okusuri-notification/
 │   └── utils/
 │       └── webpush.ts    # Web Push通知送信
 ├── scripts/
-│   └── bundle-lambda.js  # Lambda用ZIPファイル作成スクリプト
+│   └── bundle-lambda.js  # Lambda用コードZIPとweb-push用レイヤーZIPを作成
 ├── terraform/
 │   ├── main.tf           # Terraformメイン設定
 │   ├── variables.tf      # 変数定義
