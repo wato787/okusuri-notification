@@ -125,6 +125,16 @@ async function sendNotification(): Promise<boolean> {
       )
     }
     
+    // VAPID公開鍵の不一致の場合のログ
+    if (errorMessage.includes('VAPID公開鍵の不一致') || errorMessage.includes('VapidPkHashMismatch')) {
+      console.error(
+        '⚠️ VAPID公開鍵が一致しません。サブスクリプションを作成した際に使用したVAPID公開鍵と同じものを使用してください。'
+      )
+      console.error(
+        '対処方法: ブラウザで新しいサブスクリプションを作成する際、現在のVAPID公開鍵を使用してください。'
+      )
+    }
+    
     return false
   }
 }

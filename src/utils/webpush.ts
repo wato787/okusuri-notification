@@ -48,20 +48,49 @@ export async function sendWebPushNotification(
     ) {
       const webPushError = error as { statusCode: number; body?: string }
       
+      // エラーボディをパースして詳細な情報を取得
+      let errorBody: unknown = null
+      if (webPushError.body) {
+        try {
+          errorBody = JSON.parse(webPushError.body)
+        } catch {
+          // JSONパースに失敗した場合は文字列のまま使用
+          errorBody = webPushError.body
+        }
+      }
+      
       // 410 Gone: サブスクリプションが無効（期限切れまたは購読解除）
       if (webPushError.statusCode === 410) {
         const errorMessage =
-          webPushError.body ||
-          'プッシュサブスクリプションが期限切れまたは購読解除されています。新しいサブスクリプションが必要です。'
+          typeof errorBody === 'object' && errorBody !== null && 'reason' in errorBody
+            ? (errorBody as { reason: string }).reason
+            : webPushError.body ||
+              'プッシュサブスクリプションが期限切れまたは購読解除されています。新しいサブスクリプションが必要です。'
         throw new Error(`サブスクリプション無効 (410): ${errorMessage}`)
       }
       
+      // 400 Bad Request: VAPID鍵の不一致などの問題
+      if (webPushError.statusCode === 400) {
+        const reason =
+          typeof errorBody === 'object' && errorBody !== null && 'reason' in errorBody
+            ? (errorBody as { reason: string }).reason
+            : '不明なエラー'
+        
+        if (reason === 'VapidPkHashMismatch') {
+          throw new Error(
+            `VAPID公開鍵の不一致 (400): サブスクリプション作成時に使用されたVAPID公開鍵と、現在使用しているVAPID公開鍵が異なります。同じVAPID鍵ペアでサブスクリプションを作成し直してください。`
+          )
+        }
+        
+        throw new Error(`Web Push送信エラー (HTTP 400): ${reason}`)
+      }
+      
       // その他のHTTPエラー
-      throw new Error(
-        `Web Push送信エラー (HTTP ${webPushError.statusCode}): ${
-          webPushError.body || '不明なエラー'
-        }`
-      )
+      const reason =
+        typeof errorBody === 'object' && errorBody !== null && 'reason' in errorBody
+          ? (errorBody as { reason: string }).reason
+          : webPushError.body || '不明なエラー'
+      throw new Error(`Web Push送信エラー (HTTP ${webPushError.statusCode}): ${reason}`)
     }
     
     // その他のエラーはそのまま再スロー
