@@ -5,6 +5,8 @@ node_modules/
 # Build outputs
 dist/
 .wrangler/
+lambda.zip
+*.zip
 
 # Environment variables
 .env
