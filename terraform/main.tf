@@ -116,6 +116,8 @@ resource "aws_lambda_function" "notification_function" {
 
   source_code_hash = filebase64sha256("${path.module}/../${var.lambda_zip_file}")
 
+  layers = [aws_lambda_layer_version.webpush_dependencies.arn]
+
   environment {
     variables = {
       VAPID_PUBLIC_KEY  = aws_ssm_parameter.vapid_public_key.value
@@ -127,5 +129,17 @@ resource "aws_lambda_function" "notification_function" {
   tags = {
     Name = var.function_name
   }
+}
+
+resource "aws_lambda_layer_version" "webpush_dependencies" {
+  filename   = "${path.module}/../${var.webpush_layer_zip_file}"
+  layer_name = "${var.function_name}-webpush"
+
+  compatible_runtimes = ["nodejs20.x"]
+  description         = "web-push依存関係を含むLambda Layer"
+
+  source_code_hash = filebase64sha256("${path.module}/../${var.webpush_layer_zip_file}")
+
+  depends_on = [aws_iam_role.lambda_role]
 }
 

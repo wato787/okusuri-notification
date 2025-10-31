@@ -16,6 +16,12 @@ variable "lambda_zip_file" {
   default     = "lambda.zip"
 }
 
+variable "webpush_layer_zip_file" {
+  description = "web-push依存関係を含むLambda LayerのZIPファイルパス（プロジェクトルートからの相対パス）"
+  type        = string
+  default     = "webpush-layer.zip"
+}
+
 variable "ssm_parameter_prefix" {
   description = "SSM Parameter Storeのパラメータプレフィックス"
   type        = string

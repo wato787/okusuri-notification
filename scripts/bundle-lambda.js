@@ -11,60 +11,78 @@ const projectRoot = path.resolve(__dirname, '..')
 const distDir = path.join(projectRoot, 'dist')
 const nodeModulesDir = path.join(projectRoot, 'node_modules')
 const packageJsonPath = path.join(projectRoot, 'package.json')
-const outputZipPath = path.join(projectRoot, 'lambda.zip')
+const lambdaZipPath = path.join(projectRoot, 'lambda.zip')
+const layerZipPath = path.join(projectRoot, 'webpush-layer.zip')
 
-// distディレクトリが存在するか確認
-if (!fs.existsSync(distDir)) {
-  console.error('エラー: distディレクトリが見つかりません。先に "npm run build" を実行してください。')
+async function main() {
+  if (!fs.existsSync(distDir)) {
+    console.error('エラー: distディレクトリが見つかりません。先に "bun run build" を実行してください。')
+    process.exit(1)
+  }
+
+  // 既存のZIPファイルを削除
+  removeIfExists(lambdaZipPath, '既存のlambda.zipを削除しました')
+  removeIfExists(layerZipPath, '既存のwebpush-layer.zipを削除しました')
+
+  await createZip(lambdaZipPath, (archive) => {
+    console.log('dist/ ディレクトリをZIPに追加中...')
+    archive.directory(distDir, false)
+
+    if (fs.existsSync(packageJsonPath)) {
+      console.log('package.jsonをZIPに追加中...')
+      archive.file(packageJsonPath, { name: 'package.json' })
+    }
+  })
+
+  if (!fs.existsSync(nodeModulesDir)) {
+    console.warn('警告: node_modulesディレクトリが見つかりません。レイヤーZIPは作成されません。')
+    return
+  }
+
+  await createZip(layerZipPath, (archive) => {
+    console.log('node_modules/ をレイヤーに追加中...')
+    archive.directory(nodeModulesDir, 'nodejs/node_modules')
+
+    if (fs.existsSync(packageJsonPath)) {
+      console.log('nodejs/package.jsonをレイヤーに追加中...')
+      archive.file(packageJsonPath, { name: 'nodejs/package.json' })
+    }
+  })
+}
+
+main().catch((error) => {
+  console.error('バンドル処理中にエラーが発生しました:', error)
   process.exit(1)
-}
-
-// 既存のZIPファイルを削除
-if (fs.existsSync(outputZipPath)) {
-  fs.unlinkSync(outputZipPath)
-  console.log('既存のlambda.zipを削除しました')
-}
-
-// ZIPファイルを作成
-const output = fs.createWriteStream(outputZipPath)
-const archive = archiver('zip', {
-  zlib: { level: 9 } // 最高圧縮レベル
 })
 
-output.on('close', () => {
-  console.log(`✅ Lambda用ZIPファイルを作成しました: ${outputZipPath}`)
-  console.log(`   ファイルサイズ: ${archive.pointer()} バイト`)
-})
-
-archive.on('error', (err) => {
-  console.error('ZIP作成エラー:', err)
-  process.exit(1)
-})
-
-archive.pipe(output)
-
-// package.jsonを読み込んで依存関係を取得
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-const dependencies = Object.keys(packageJson.dependencies || {})
-
-// distディレクトリの内容を追加
-console.log('dist/ ディレクトリをZIPに追加中...')
-archive.directory(distDir, false)
-
-// node_modules全体を追加（production依存関係とそのすべてのネストされた依存関係を含む）
-// web-pushなどのライブラリは多くの依存関係を持つため、確実に動作するように全体をコピーします
-if (fs.existsSync(nodeModulesDir)) {
-  console.log('node_modules/ 全体をZIPに追加中...')
-  archive.directory(nodeModulesDir, 'node_modules')
-  console.log('  - node_modules全体を追加しました')
-} else {
-  console.warn('警告: node_modulesディレクトリが見つかりません。')
+function removeIfExists(filePath, message) {
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath)
+    console.log(message)
+  }
 }
 
-// package.jsonを追加（Lambdaランタイムで必要）
-console.log('package.jsonをZIPに追加中...')
-archive.file(packageJsonPath, { name: 'package.json' })
+function createZip(outputPath, configureArchive) {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(outputPath)
+    const archive = archiver('zip', {
+      zlib: { level: 9 },
+    })
 
-// ZIP作成を開始
-archive.finalize()
+    output.on('close', () => {
+      console.log(`✅ ZIPファイルを作成しました: ${outputPath}`)
+      console.log(`   ファイルサイズ: ${archive.pointer()} バイト`)
+      resolve(undefined)
+    })
+
+    archive.on('error', (err) => {
+      reject(err)
+    })
+
+    archive.pipe(output)
+    configureArchive(archive)
+
+    archive.finalize()
+  })
+}
 
