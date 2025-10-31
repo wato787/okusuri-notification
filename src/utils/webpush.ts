@@ -10,13 +10,6 @@ export async function sendWebPushNotification(
   vapidPublicKey: string,
   vapidPrivateKey: string
 ): Promise<void> {
-  // VAPID鍵を設定
-  webpush.setVapidDetails(
-    'mailto:example@example.com', // Subscriber (開発者のメールアドレス)
-    vapidPublicKey,
-    vapidPrivateKey
-  )
-
   // 通知データをJSONエンコード
   const payload = JSON.stringify({
     title: notification.title,
@@ -36,6 +29,11 @@ export async function sendWebPushNotification(
     payload,
     {
       TTL: 30, // Time To Live (秒)
+      vapidDetails: {
+        subject: 'mailto:example@example.com', // Subscriber (開発者のメールアドレス)
+        publicKey: vapidPublicKey,
+        privateKey: vapidPrivateKey,
+      },
     }
   )
 }
