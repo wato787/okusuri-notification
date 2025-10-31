@@ -15,7 +15,7 @@ const outputZipPath = path.join(projectRoot, 'lambda.zip')
 
 // distディレクトリが存在するか確認
 if (!fs.existsSync(distDir)) {
-  console.error('エラー: distディレクトリが見つかりません。先に "npm run build:lambda" を実行してください。')
+  console.error('エラー: distディレクトリが見つかりません。先に "npm run build" を実行してください。')
   process.exit(1)
 }
 

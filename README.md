@@ -1,79 +1,116 @@
 # okusuri-notification
 
-通知を送信するためのサービス。Cloudflare Workersを使用して通知を送信します。
+通知を送信するためのサービス。AWS Lambda + Terraformでデプロイできます。
 
 ## 技術スタック
 
-- **Runtime**: Bun
-- **Framework**: Hono
-- **Platform**: Cloudflare Workers
+- **Runtime**: Node.js 20 (AWS Lambda)
 - **Language**: TypeScript
+- **Infrastructure**: Terraform
+- **Platform**: AWS Lambda
 
 ## セットアップ
 
 ### 必要な環境
 
-- [Bun](https://bun.sh/) (最新版)
-- [Cloudflareアカウント](https://dash.cloudflare.com/) (デプロイ時)
+- [Node.js](https://nodejs.org/) (最新版)
+- [Terraform](https://www.terraform.io/) (最新版)
+- [mise](https://mise.jdx.dev/) (開発環境管理ツール)
+- [AWSアカウント](https://aws.amazon.com/) (デプロイ時)
 
 ### インストール
 
 ```bash
+# miseでツールをインストール
+mise install
+
 # 依存関係のインストール
 bun install
 ```
 
 ### 環境変数の設定
 
-開発環境用の環境変数を設定する場合、`.dev.vars` ファイルを作成してください。
+Terraformで使用する環境変数を設定するため、`terraform/terraform.tfvars` ファイルを作成してください。
 
 ```bash
-# .dev.vars.example をコピーして .dev.vars を作成
-cp .dev.vars.example .dev.vars
+# terraform.tfvars.example をコピーして terraform.tfvars を作成
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 
-# .dev.vars を編集して実際の値を設定
+# terraform.tfvars を編集して実際の値を設定
 ```
-
-### 開発サーバーの起動
-
-```bash
-# ローカル開発サーバーを起動
-bun run dev
-```
-
-サーバー起動後、`http://localhost:8787` にアクセスできます。
 
 ### デプロイ
 
+#### 初回デプロイ
+
 ```bash
-# Cloudflare Workersにデプロイ
-bun run deploy
+# Terraformを初期化
+bun run terraform:init
+
+# 変更内容を確認
+bun run terraform:plan
+
+# デプロイ（ビルド + ZIP作成 + Terraform適用）
+mise run deploy
 ```
 
-初回デプロイ時は、`wrangler login` でCloudflareアカウントにログインする必要があります。
+#### 以降のデプロイ
 
-## APIエンドポイント
-
-### POST /api/notification
-
-全ユーザーに通知を送信します。
-
-**リクエスト**:
+**コード変更がある場合**（TypeScriptファイルを編集した場合）：
 ```bash
-curl -X POST http://localhost:8787/api/notification
+# 一括デプロイ（ビルド + ZIP作成 + Terraform適用）
+mise run deploy
+```
+
+または、個別に実行する場合：
+
+```bash
+# TypeScriptをコンパイルしてLambda用ZIPファイルを作成
+bun run build:lambda
+
+# Terraformで変更内容を確認
+bun run terraform:plan
+
+# Terraformでデプロイ
+bun run terraform:apply
+```
+
+**環境変数のみ変更する場合**（`terraform.tfvars`の値を変更した場合）：
+```bash
+# Terraformで変更内容を確認
+bun run terraform:plan
+
+# Terraformで適用（ビルド・バンドル不要）
+bun run terraform:apply
+```
+
+環境変数だけの変更の場合は、関数コードの再ビルドは不要なので`terraform apply`だけで更新できます。
+
+## Lambda関数の実行
+
+### 手動実行
+
+```bash
+# AWS CLIでLambda関数を実行
+aws lambda invoke \
+  --function-name okusuri-notification \
+  --payload '{}' \
+  response.json
+
+# レスポンスを確認
+cat response.json
 ```
 
 **レスポンス**:
 ```json
 {
-  "message": "notification sent successfully",
-  "sent_count": 10,
-  "process_time_ms": 1234
+  "success": true,
+  "message": "通知送信成功"
 }
 ```
 
 **処理内容**:
-1. 環境変数からWeb Pushサブスクリプションを取得
+1. SSM Parameter StoreからWeb Pushサブスクリプションを取得
 2. VAPID鍵を確認
 3. 固定メッセージ（「お薬の時間です」）を使用してWeb Push通知を送信
 
@@ -82,14 +119,20 @@ curl -X POST http://localhost:8787/api/notification
 ```
 okusuri-notification/
 ├── src/
-│   ├── index.ts          # メインエントリーポイントとルーティング
+│   ├── index.ts          # Lambdaハンドラー（メインエントリーポイント）
 │   ├── types.ts          # 型定義
 │   └── utils/
 │       └── webpush.ts    # Web Push通知送信
+├── scripts/
+│   └── bundle-lambda.js  # Lambda用ZIPファイル作成スクリプト
+├── terraform/
+│   ├── main.tf           # Terraformメイン設定
+│   ├── variables.tf      # 変数定義
+│   ├── outputs.tf       # 出力値定義
+│   └── terraform.tfvars.example  # 変数テンプレート
 ├── package.json          # 依存関係とスクリプト
-├── wrangler.toml         # Cloudflare Workers設定
 ├── tsconfig.json         # TypeScript設定
-├── .dev.vars.example     # 環境変数テンプレート
+├── mise.toml            # mise設定
 └── README.md
 ```
 
@@ -97,32 +140,27 @@ okusuri-notification/
 
 ### 実装済み機能
 
-- ✅ POST `/api/notification` エンドポイント
+- ✅ Lambda関数の実装
 - ✅ Web Push通知送信機能
-- ✅ 重複送信防止（KVストア使用）
-- ✅ 1ユーザー固定の簡略化実装
+- ✅ Terraformによるインフラ管理
+- ✅ SSM Parameter Storeによる環境変数管理（無料）
 - ✅ 固定メッセージによる通知送信
-
-### 動作確認が必要
-
-- ⚠️ Web Pushライブラリの動作確認
-  - `web-push`ライブラリがCloudflare Workersで動作するか要確認
-  - 動作しない場合は、Web Pushプロトコルのネイティブ実装が必要
+- ✅ ビルド・デプロイワークフローの自動化
 
 ### 注意事項
 
-- 環境変数から直接Web Pushサブスクリプションを読み込みます
+- SSM Parameter Storeから環境変数を読み込みます
 - 通知メッセージは固定メッセージ（「お薬の時間です」）です
-- データベースは使用していません（環境変数のみで動作）
+- データベースは使用していません（SSM Parameter Storeのみで動作）
 
-## 環境変数
+## 環境変数（SSM Parameter Store）
 
-以下の環境変数を設定してください（`.dev.vars`ファイルに記述）：
+以下の環境変数を`terraform/terraform.tfvars`に設定してください。これらはSSM Parameter Store（標準パラメータ、無料）に保存されます：
 
 ### 必須
 
-- `VAPID_PUBLIC_KEY`: Web Push用の公開鍵
-- `VAPID_PRIVATE_KEY`: Web Push用の秘密鍵
+- `vapid_public_key`: Web Push用の公開鍵
+- `vapid_private_key`: Web Push用の秘密鍵
 
 VAPID鍵の生成方法：
 ```bash
@@ -132,15 +170,30 @@ web-push generate-vapid-keys
 
 ### 必須
 
-- `PUSH_SUBSCRIPTION`: Web PushサブスクリプションJSON文字列
+- `push_subscription`: Web Pushサブスクリプション（JSON文字列）
+  - JSON内のダブルクォートは`\"`でエスケープしてください
+
+例：
+```
+push_subscription = "{\"endpoint\":\"https://...\",\"keys\":{\"p256dh\":\"...\",\"auth\":\"...\"}}"
+```
 
 ### 任意（デフォルト値あり）
 
-- `USER_ID`: ユーザーID（デフォルト: `user-1`）
+- `user_id`: ユーザーID（デフォルト: `user-1`）
+
+## 利用可能なbunスクリプト
+
+- `bun run build`: TypeScriptをコンパイル
+- `bun run build:lambda`: TypeScriptをコンパイルしてLambda用ZIPファイルを作成
+- `bun run terraform:init`: Terraformを初期化
+- `bun run terraform:plan`: Terraformの変更内容を確認
+- `bun run terraform:apply`: Terraformでデプロイ
+- `bun run deploy:lambda`: ビルド + バンドル + Terraform適用
 
 ## 参考資料
 
-- [Hono公式ドキュメント](https://hono.dev/)
-- [Cloudflare Workers公式ドキュメント](https://developers.cloudflare.com/workers/)
-- [Cloudflare D1公式ドキュメント](https://developers.cloudflare.com/d1/)
-- [Bun公式ドキュメント](https://bun.sh/docs)
+- [AWS Lambda公式ドキュメント](https://docs.aws.amazon.com/lambda/)
+- [Terraform公式ドキュメント](https://www.terraform.io/docs)
+- [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html)
+- [mise公式ドキュメント](https://mise.jdx.dev/)

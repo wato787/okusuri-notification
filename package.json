@@ -6,8 +6,12 @@
   "scripts": {
     "build": "tsc",
     "type-check": "tsc --noEmit",
-    "build:lambda": "node scripts/bundle-lambda.js",
-    "deploy:lambda": "npm run build:lambda && npm run bundle:lambda"
+    "bundle:lambda": "node scripts/bundle-lambda.js",
+    "build:lambda": "bun run build && bun run bundle:lambda",
+    "terraform:init": "cd terraform && terraform init",
+    "terraform:plan": "cd terraform && terraform plan",
+    "terraform:apply": "cd terraform && terraform apply -auto-approve",
+    "deploy:lambda": "bun run build:lambda && bun run terraform:apply"
   },
   "dependencies": {
     "web-push": "^3.6.7"
