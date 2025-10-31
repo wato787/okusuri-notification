@@ -1,5 +1,4 @@
-import { Hono } from 'hono'
-import type { Env } from './types'
+import type { Context } from 'aws-lambda'
 import {
   sendWebPushNotification,
 } from './utils/webpush'
@@ -8,51 +7,48 @@ import type { PushSubscription } from './types'
 // 固定通知メッセージ
 const DEFAULT_NOTIFICATION_MESSAGE = 'お薬の時間です'
 
-const app = new Hono<{ Bindings: Env }>()
-
-app.get('/', (c) => {
-  return c.json({
-    message: 'okusuri-notification service',
-    status: 'ok',
-  })
-})
-
 /**
- * 通知送信エンドポイント
- * POST /api/notification
+ * Lambdaハンドラー
  */
-app.post('/api/notification', async (c) => {
-  const startTime = Date.now()
-  const env = c.env
-
+export const handler = async (
+  _event: unknown,
+  _context: Context
+): Promise<{ success: boolean; message?: string }> => {
   try {
-    const result = await sendNotification(env)
+    const result = await sendNotification()
 
-    const processTime = Date.now() - startTime
-
-    return c.json({
-      message: 'notification sent successfully',
-      sent_count: result ? 1 : 0,
-      process_time_ms: processTime,
-    })
+    if (result) {
+      return {
+        success: true,
+        message: '通知送信成功',
+      }
+    } else {
+      return {
+        success: false,
+        message: '通知送信に失敗しました',
+      }
+    }
   } catch (error) {
     console.error('通知送信エラー:', error)
-    return c.json(
-      {
-        message: 'notification failed',
-        error: error instanceof Error ? error.message : 'unknown error',
-      },
-      500
-    )
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'unknown error',
+    }
   }
-})
+}
 
 /**
  * 通知送信処理
  */
-async function sendNotification(env: Env): Promise<boolean> {
+async function sendNotification(): Promise<boolean> {
+  // 環境変数から取得
+  const pushSubscription = process.env.PUSH_SUBSCRIPTION
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+  const userId = process.env.USER_ID || 'user-1'
+
   // サブスクリプションが設定されていない
-  if (!env.PUSH_SUBSCRIPTION || env.PUSH_SUBSCRIPTION === '') {
+  if (!pushSubscription || pushSubscription === '') {
     console.error('PUSH_SUBSCRIPTIONが設定されていません')
     return false
   }
@@ -60,21 +56,20 @@ async function sendNotification(env: Env): Promise<boolean> {
   // サブスクリプションJSONをパース
   let subscription: PushSubscription
   try {
-    subscription = JSON.parse(env.PUSH_SUBSCRIPTION)
+    subscription = JSON.parse(pushSubscription)
   } catch (error) {
     console.error('サブスクリプションJSONパースエラー:', error)
     return false
   }
 
   // VAPID鍵の確認
-  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
+  if (!vapidPublicKey || !vapidPrivateKey) {
     console.error('VAPID鍵が設定されていません')
     return false
   }
 
   // 固定メッセージを使用
   const message = DEFAULT_NOTIFICATION_MESSAGE
-  const userId = env.USER_ID || 'user-1'
 
   // Web Push通知を送信
   try {
@@ -89,8 +84,8 @@ async function sendNotification(env: Env): Promise<boolean> {
           userId,
         },
       },
-      env.VAPID_PUBLIC_KEY,
-      env.VAPID_PRIVATE_KEY
+      vapidPublicKey,
+      vapidPrivateKey
     )
 
     console.log('通知送信成功')
@@ -100,6 +95,4 @@ async function sendNotification(env: Env): Promise<boolean> {
     return false
   }
 }
-
-export default app
 

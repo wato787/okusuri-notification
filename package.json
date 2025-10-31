@@ -4,19 +4,16 @@
   "description": "通知を送信するためのサービス",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "build": "tsc",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.0.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240208.0",
+    "@types/aws-lambda": "^8.10.145",
     "@types/node": "^20.0.0",
     "@types/web-push": "^3.6.4",
-    "typescript": "^5.0.0",
-    "wrangler": "^3.0.0"
+    "typescript": "^5.0.0"
   }
 }

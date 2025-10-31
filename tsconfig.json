@@ -3,10 +3,8 @@
     "target": "ES2022",
     "module": "ES2022",
     "lib": ["ES2022"],
-    "moduleResolution": "bundler",
-    "types": ["@cloudflare/workers-types"],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
+    "moduleResolution": "node",
+    "types": ["node", "@types/aws-lambda"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -14,7 +12,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowJs": true,
-    "noEmit": true
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

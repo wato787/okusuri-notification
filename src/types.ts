@@ -20,14 +20,3 @@ export interface NotificationData {
   }
 }
 
-// 環境変数
-export interface Env {
-  // VAPID鍵
-  VAPID_PUBLIC_KEY?: string
-  VAPID_PRIVATE_KEY?: string
-  // Web Pushサブスクリプション（必須）
-  PUSH_SUBSCRIPTION?: string // JSON文字列
-  // ユーザーID（環境変数から読み込み可能）
-  USER_ID?: string
-}
-
