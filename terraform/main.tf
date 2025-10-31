@@ -58,7 +58,6 @@ resource "aws_iam_role_policy" "lambda_ssm_read" {
           aws_ssm_parameter.vapid_public_key.arn,
           aws_ssm_parameter.vapid_private_key.arn,
           aws_ssm_parameter.push_subscription.arn,
-          aws_ssm_parameter.user_id.arn
         ]
       }
     ]
