@@ -1,4 +1,4 @@
-import type { PushSubscription, NotificationData } from '../types'
+import type { PushSubscription, NotificationData } from '../types.js'
 import * as webpush from 'web-push'
 
 /**
