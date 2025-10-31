@@ -1,7 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import archiver from 'archiver'
+
+const execAsync = promisify(exec)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -13,6 +17,7 @@ const nodeModulesDir = path.join(projectRoot, 'node_modules')
 const packageJsonPath = path.join(projectRoot, 'package.json')
 const lambdaZipPath = path.join(projectRoot, 'lambda.zip')
 const layerZipPath = path.join(projectRoot, 'webpush-layer.zip')
+const layerDepsDir = path.join(projectRoot, '.layer-deps')
 
 async function main() {
   if (!fs.existsSync(distDir)) {
@@ -34,26 +39,72 @@ async function main() {
     }
   })
 
-  if (!fs.existsSync(nodeModulesDir)) {
-    console.error('エラー: node_modulesディレクトリが見つかりません。"bun install" を実行して依存関係をインストールしてください。')
-    process.exit(1)
-  }
+  // Layer用にproduction依存関係のみを含むディレクトリを作成
+  try {
+    await createLayerDependencies()
 
-  await createZip(layerZipPath, (archive) => {
-    console.log('node_modules/ をレイヤーに追加中...')
-    archive.directory(nodeModulesDir, 'nodejs/node_modules')
-
-    if (fs.existsSync(packageJsonPath)) {
-      console.log('nodejs/package.jsonをレイヤーに追加中...')
-      archive.file(packageJsonPath, { name: 'nodejs/package.json' })
+    const layerNodeModulesDir = path.join(layerDepsDir, 'node_modules')
+    if (!fs.existsSync(layerNodeModulesDir)) {
+      console.error('エラー: Layer用のnode_modulesディレクトリの作成に失敗しました。')
+      process.exit(1)
     }
-  })
+
+    await createZip(layerZipPath, (archive) => {
+      console.log('production依存関係をレイヤーに追加中...')
+      archive.directory(layerNodeModulesDir, 'nodejs/node_modules')
+
+      // package.jsonは元のファイルを使用（production依存関係のみの情報を含む）
+      if (fs.existsSync(packageJsonPath)) {
+        console.log('nodejs/package.jsonをレイヤーに追加中...')
+        archive.file(packageJsonPath, { name: 'nodejs/package.json' })
+      }
+    })
+  } finally {
+    // 一時ディレクトリをクリーンアップ（エラーが発生しても実行）
+    cleanupLayerDeps()
+  }
 }
 
 main().catch((error) => {
   console.error('バンドル処理中にエラーが発生しました:', error)
   process.exit(1)
 })
+
+async function createLayerDependencies() {
+  // 既存の一時ディレクトリを削除
+  if (fs.existsSync(layerDepsDir)) {
+    fs.rmSync(layerDepsDir, { recursive: true, force: true })
+  }
+
+  // 一時ディレクトリを作成
+  fs.mkdirSync(layerDepsDir, { recursive: true })
+
+  // package.jsonを一時ディレクトリにコピー
+  const layerPackageJsonPath = path.join(layerDepsDir, 'package.json')
+  fs.copyFileSync(packageJsonPath, layerPackageJsonPath)
+
+  console.log('production依存関係をインストール中...')
+  try {
+    // bun install --productionを実行
+    const { stdout, stderr } = await execAsync('bun install --production', {
+      cwd: layerDepsDir,
+    })
+    if (stderr && !stderr.includes('warn')) {
+      console.warn('インストール警告:', stderr)
+    }
+    console.log('production依存関係のインストールが完了しました')
+  } catch (error) {
+    console.error('production依存関係のインストールに失敗しました:', error)
+    throw error
+  }
+}
+
+function cleanupLayerDeps() {
+  if (fs.existsSync(layerDepsDir)) {
+    fs.rmSync(layerDepsDir, { recursive: true, force: true })
+    console.log('一時ディレクトリをクリーンアップしました')
+  }
+}
 
 function removeIfExists(filePath, message) {
   if (fs.existsSync(filePath)) {
